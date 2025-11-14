@@ -127,7 +127,7 @@ sim_regression=function(n_subj, beta_0=1.46, beta_1=3.17) {#sample size=n_subj
 ```{r}
 sim_regression(n_subj=30)
 ```
-
+## 用for-loop重复模拟500次
 ```{r}
 output=vector("list", length=500)
 
@@ -136,5 +136,23 @@ for (i in 1:500) {
 }
 output |>
   bind_rows()
+```
+## 用expand_grid+map
+```{r}
+slr_sim_results_df=
+  expand_grid(
+    sample_size=30,
+    iter=1:500
+  ) |>
+  mutate(
+    results=map(sample_size,sim_regression)
+  ) |>
+  unnest(results)
+```
+
+```{r}
+slr_sim_results_df |>
+  ggplot(aes(x=beta0_hat, y=beta1_hat))+
+  geom_point()
 ```
 
