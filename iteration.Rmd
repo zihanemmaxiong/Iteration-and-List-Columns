@@ -9,6 +9,7 @@ output: github_document
 library(tidyverse)
 library(rvest)
 ```
+
 ## make a list
 ```{r}
 l=
@@ -163,6 +164,6 @@ nsduh_df=
   mutate(
     table=map(number,nsduh_import,html=nsduh_html)
   ) |>
-  unnest(table)
+  unnest(table)#三张表合成一个大表
 ```
 
