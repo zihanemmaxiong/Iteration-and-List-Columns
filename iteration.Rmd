@@ -1,0 +1,168 @@
+---
+title: "Iteration"
+author: "Zihan Xiong"
+date: "2025-10-28"
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(rvest)
+```
+## make a list
+```{r}
+l=
+  list(
+    vec_numeric = 1: 23,
+    char_vec = c("Zihan"),
+    mat = matrix(1:8, nrow=2, ncol=4),
+    summary=summary(rnorm(1000, mean=4))
+  )
+l
+
+```
+## 取list的三种等价方式
+```{r}
+l[[1]]
+l[["vec_numeric"]]
+l$mat
+```
+
+## make another list
+```{r}
+list_normals=
+  list(
+    a=rnorm(30, mean=3, sd=1),
+    b=rnorm(30, mean=30, sd=1),
+    c=rnorm(30, mean=3, sd=10),
+    d=rnorm(30, mean=-3, sd=4)
+  )
+```
+
+```{r}
+mean_and_sd=function(x){
+  c(mean=mean(x), sd=sd(x))
+}
+```
+
+```{r}
+mean_and_sd(list_normals [[1]])
+mean_and_sd(list_normals [[2]])
+mean_and_sd(list_normals [[3]])
+mean_and_sd(list_normals [[4]])
+```
+## use loop to iterate
+```{r}
+output=vector("list",length = 4)#生成空的list为结果容器, 长度为4
+for (i in 1:4) {
+  output[[i]]=mean_and_sd(list_normals[[i]]) #把第i次循环的结果放到第i个位置
+  
+}
+output
+```
+## now use map
+```{r}
+output=map(list_normals, mean_and_sd)#每一格运行mean sd,并把结果存入一个新的list, 等价于:
+
+```
+```{r}
+output=map(list_normals, median)
+output
+```
+## map_dfr/map_dbl
+```{r}
+#输出一个data frame
+map_dfr(list_normals, mean_and_sd, .id="sample")#row bind变成一个data frame
+```
+
+```{r}
+#输出一个numeric vector
+map_dbl(list_normals,median)
+```
+
+```{r}
+listcol_df=
+  tibble(
+    name=c("a","b","c","d"),#每一行sample存的是一个向量,不是一个单值
+    sample=list_normals
+  )
+listcol_df
+```
+```{r}
+pull(listcol_df,name)#检查数据框是否真的装了list
+pull(listcol_df,sample)
+```
+```{r}
+mean_and_sd(pull(listcol_df,sample)[[1]])#对第一组数据向量计算,但是太慢, iterate
+```
+```{r}
+map(pull(listcol_df,sample), mean_and_sd)
+```
+##添加一个新的list column summary
+```{r}
+listcol_df=
+  listcol_df |>
+  mutate(
+    summary=map(sample, mean_and_sd)
+  )
+pull(listcol_df,summary)
+```
+```{r}
+listcol_df |>
+  select(-sample) |>
+  unnest(summary)
+```
+
+##网页抓取+清洗+迭代
+```{r}
+nsduh_url="http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+nsduh_html=read_html(nsduh_url)#这个HTML文件里包含多个tables
+```
+
+```{r}
+nsduh_import=function(html,table_num){
+  data=html |> #开始清洗
+    html_table() |> #自动抓取表哥,返回一个list, 每个元素是一个表
+    nth(table_num) |>#取第几个表
+    slice(-1) |> #去掉第一hang
+    select(-contains("P value")) |>
+    pivot_longer(
+      -State,
+      names_to = "age_year",
+      values_to = "percent") |>
+    separate(age_year, into=c("age","year"), sep = "\\(") |>
+    mutate(
+      year=str_replace(year,"\\)",""),
+      percent=str_replace(percent,"[a-c]$",""),
+      percent=as.numeric(percent)) |>
+    filter(!(State %in% c("Total U.S.", "Northeast","Midwest", "South", "West")))
+    data
+}
+nsduh_import(nsduh_html,table_num = 1)#用iteration运行函数3次, nsduh_import的作用就是从html中抽一张表,清理成人类可读的data,输出一个干净的tibble
+nsduh_import(nsduh_html,table_num = 2)
+nsduh_import(nsduh_html,table_num =3)
+#这是手动运行import1 2 3
+```
+## for loop循环
+```{r}
+output=vector("list", length=3)
+for (i in 1:3) {
+  output [[i]]=nsduh_import(html=nsduh_html,i)
+}
+output
+```
+```{r}
+map(1:3, nsduh_import, html=nsduh_html)#遍历1、2、3, 第二个参数 table_num 传给 nsduh_import, 
+```
+```{r}
+nsduh_df=
+  tibble(
+    name=c("marj year","marj month","marj first"),
+    number=1:3
+  ) |>
+  mutate(
+    table=map(number,nsduh_import,html=nsduh_html)
+  ) |>
+  unnest(table)
+```
+
