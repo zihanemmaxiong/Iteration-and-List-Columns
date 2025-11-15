@@ -155,4 +155,39 @@ slr_sim_results_df |>
   ggplot(aes(x=beta0_hat, y=beta1_hat))+
   geom_point()
 ```
+```{r}
+birthday=sample(1:365, 5, replace = TRUE)
+repeated_bday=length(unique(birthday)) <5
+repeated_bday
+```
+
+```{r}
+bday_sim=function(n_room){
+  birthday=sample(1:365, n_room, replace = TRUE)
+  repeated_bday=length(unique(birthday)) <n_room
+  repeated_bday
+}
+bday_sim(20)
+```
+```{r}
+bday_sim_results=
+  expand_grid(
+    bday=5:50,
+    iter=1:2500
+  ) |>
+  mutate(
+    result=map_lgl(bday, bday_sim)
+  ) |>
+  group_by(bday) |>
+  summarise(
+    prob_repeat=mean(result)
+  )
+```
+
+```{r}
+bday_sim_results |>
+  ggplot(aes(x=bday, y=prob_repeat))+
+  geom_point() +
+  geom_line()
+```
 

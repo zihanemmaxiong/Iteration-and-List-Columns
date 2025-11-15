@@ -25,7 +25,7 @@ sim_mean_sd(n_subj=400)
     ## # A tibble: 1 × 2
     ##   mu_hat sigma_hat
     ##    <dbl>     <dbl>
-    ## 1 0.0350     0.999
+    ## 1 0.0144      1.01
 
 ``` r
 output=vector("list", length=100)
@@ -81,12 +81,12 @@ sim_results_df |>
 ```
 
     ## # A tibble: 4 × 3
-    ##   sample_size emp_mean emp_se
-    ##         <dbl>    <dbl>  <dbl>
-    ## 1          30  0.00794 0.189 
-    ## 2          60  0.00313 0.130 
-    ## 3          90  0.00108 0.110 
-    ## 4         120  0.00321 0.0897
+    ##   sample_size  emp_mean emp_se
+    ##         <dbl>     <dbl>  <dbl>
+    ## 1          30  0.000121 0.178 
+    ## 2          60  0.00693  0.125 
+    ## 3          90 -0.00193  0.110 
+    ## 4         120 -0.00229  0.0892
 
 simple linear regression模拟一份简单线性回归
 
@@ -100,18 +100,18 @@ sim_df
 ```
 
     ## # A tibble: 30 × 2
-    ##          x     y
-    ##      <dbl> <dbl>
-    ##  1  0.531  2.09 
-    ##  2  0.239  2.89 
-    ##  3  2.52   9.39 
-    ##  4 -0.0625 0.819
-    ##  5  1.06   6.01 
-    ##  6 -0.187  1.93 
-    ##  7  1.32   6.20 
-    ##  8  1.13   4.82 
-    ##  9  1.23   5.38 
-    ## 10 -0.138  1.81 
+    ##         x       y
+    ##     <dbl>   <dbl>
+    ##  1  0.783  4.94  
+    ##  2  0.586  2.21  
+    ##  3  0.923  6.07  
+    ##  4  1.16   6.56  
+    ##  5  0.921  4.44  
+    ##  6  1.29   6.33  
+    ##  7 -0.288  1.43  
+    ##  8 -0.461  0.0543
+    ##  9 -1.72  -1.28  
+    ## 10 -0.275  0.337 
     ## # ℹ 20 more rows
 
 生成的数据关系
@@ -130,7 +130,7 @@ coef(slr_fit)#coef输出估计的beta0 and beta1
 ```
 
     ## (Intercept)           x 
-    ##    1.820619    3.108336
+    ##    2.034119    3.256006
 
 模拟封装成一个函数sim_regression()
 
@@ -159,7 +159,7 @@ sim_regression(n_subj=30)
     ## # A tibble: 1 × 2
     ##   beta0_hat beta1_hat
     ##       <dbl>     <dbl>
-    ## 1      1.30      3.25
+    ## 1      1.52      3.12
 
 ## 用for-loop重复模拟500次
 
@@ -176,16 +176,16 @@ output |>
     ## # A tibble: 500 × 1
     ##    `(Intercept)`
     ##            <dbl>
-    ##  1          1.16
-    ##  2          1.62
-    ##  3          1.31
-    ##  4          2.08
-    ##  5          1.18
-    ##  6          1.27
-    ##  7          1.74
-    ##  8          1.57
-    ##  9          1.27
-    ## 10          1.68
+    ##  1          1.35
+    ##  2          1.54
+    ##  3          1.56
+    ##  4          1.92
+    ##  5          1.62
+    ##  6          1.67
+    ##  7          1.69
+    ##  8          1.84
+    ##  9          1.20
+    ## 10          1.76
     ## # ℹ 490 more rows
 
 ## 用expand_grid+map
@@ -209,3 +209,46 @@ slr_sim_results_df |>
 ```
 
 <img src="simulation_files/figure-gfm/unnamed-chunk-15-1.png" width="90%" />
+
+``` r
+birthday=sample(1:365, 5, replace = TRUE)
+repeated_bday=length(unique(birthday)) <5
+repeated_bday
+```
+
+    ## [1] FALSE
+
+``` r
+bday_sim=function(n_room){
+  birthday=sample(1:365, n_room, replace = TRUE)
+  repeated_bday=length(unique(birthday)) <n_room
+  repeated_bday
+}
+bday_sim(20)
+```
+
+    ## [1] TRUE
+
+``` r
+bday_sim_results=
+  expand_grid(
+    bday=5:50,
+    iter=1:2500
+  ) |>
+  mutate(
+    result=map_lgl(bday, bday_sim)
+  ) |>
+  group_by(bday) |>
+  summarise(
+    prob_repeat=mean(result)
+  )
+```
+
+``` r
+bday_sim_results |>
+  ggplot(aes(x=bday, y=prob_repeat))+
+  geom_point() +
+  geom_line()
+```
+
+<img src="simulation_files/figure-gfm/unnamed-chunk-19-1.png" width="90%" />
